@@ -12,6 +12,17 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
 
+ILLEGAL_SYMBOLS = { \
+    "*" : "star",   \
+    "-" : "minus",  \
+    "+" : "plus",   \
+    "!" : "excl",   \
+    "?" : "quest",  \
+    "@" : "at",     \
+    "#" : "diez",   \
+    "&" : "and"     \
+}
+
 def ImgSplit(imgPath, solution):
     with open(imgPath, "rb") as fd:
         outputPath = os.path.dirname(imgPath)
@@ -45,15 +56,18 @@ def ImgSplit(imgPath, solution):
         ranges.append((start, w-1))
         logging.debug(ranges)
         if solution and len(ranges) != len(solution):
-            logging.error("Number of found boxes doesn't match solution length!")
-            exit()
+            logging.error("Number of found boxes %s doesn't match solution length %s" % ( str(len(ranges)), str(len(solution))))
+            return False
      
         for i, (x_start, x_end) in enumerate(ranges):
             img2 = image.crop(box=(x_start, 0, x_end+1, h))
             j = 0
             while True:
                 if solution:
-                    filename = outputPath"/{}_{}.png".format(solution[i], j)
+                    new_sol = solution[i]
+                    if solution[i] in ILLEGAL_SYMBOLS.keys():
+                        new_sol = ILLEGAL_SYMBOLS[solution[i]]    
+                    filename = outputPath + "/{}_{}.png".format(new_sol, j)
                 else:
                     filename = outputPath + "/{}.png".format(i)
      
@@ -62,3 +76,4 @@ def ImgSplit(imgPath, solution):
                 else:
                     img2.save(filename)
                     break
+        return True

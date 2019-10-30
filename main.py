@@ -64,34 +64,35 @@ def make_clean():
 
 def get_user_solution(captchaName):
 	while True:
-    data = input("Please enter solution for '%s': " % (captchaName))
-	    if len(data) < 10:
-	    	print("Value too short. Please inser all captcha chars!")
-	    else:
-	        return data.rstrip("\n\r")
+		data = input("Please enter solution for '%s': " % (captchaName))
+		if len(data) < 10:
+		   	print("Value too short. Please inser all captcha chars!")
+		else:
+			return data.rstrip("\n\r")
 
 
 def build_training_data():
     counter = 0
     for i in range(0, 1):
     	# Create a new dir for every captcha if there is not one already
-    	if not os.path.exists('captcha' + str(i)):
-    		os.makedirs('captcha' + str(i))
-    	# Captcha paths
-    	captcha_path = "traindata/captcha%s/0_captcha%s.png" % (str(i), str(i))	
-    	captcha_clean_path = "traindata/captcha%s/0_captcha%s_clean.png" % (str(i), str(i))
+        if not os.path.exists('captcha' + str(i)):
+            os.makedirs('traindata/captcha' + str(i))
 
-    	# Download captcha
-    	get_captcha( captcha_path )
+    	# Captcha paths
+        captcha_path = "traindata/captcha%s/0_captcha%s.png" % (str(i), str(i))	
+        captcha_clean_path = "traindata/captcha%s/0_captcha%s_clean.png" % (str(i), str(i))
+
+        # Download captcha
+        get_captcha( captcha_path )
 
     	# Remove black background from image
-        ImageFilter.clean(captcha_clean_path)
+        ImageFilter.clean(captcha_path, captcha_clean_path)
 
-        # Ask user for solution of current captcha
+		# Ask user for solution of current captcha
         solution = get_user_solution(captcha_path)
 
         # Split captcha in chars and ask for solution
-        ImageSpliter.ImgSplit(captcha_clean_path, solution)
+        splitStatus = ImageSpliter.ImgSplit(captcha_clean_path, solution)
 
 
 def main():

@@ -24,8 +24,8 @@ def is_green(pixel):
     return False
 
 
-def clean(imgIn):
-    with open(imgIn, "rb") as fd:
+def clean(imgPath, imgOutput):
+    with open(imgPath, "rb") as fd:
         p = ImageFile.Parser()
         p.feed(fd.read())
         image = p.close()
@@ -52,4 +52,4 @@ def clean(imgIn):
         # print("Box is {}/{} to {}/{}".format(x_start, y_start, x_end, y_end))
 
         img2 = img2.crop(box=(x_start, y_start, x_end+1, y_end))
-        img2.save(imgIn.replace(".png", "_clean.png"))
+        img2.save(imgOutput)
