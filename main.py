@@ -58,55 +58,55 @@ def make_clean():
     except:
         pass
 
-# sess = requests.session()
-# response = sess.post("https://www.hackthis.co.uk/?login", data={"username": "ceapa", "password": "qwerty123"})
-#
-# sess.get("https://www.hackthis.co.uk/levels/captcha/1")
-# response = sess.get("https://www.hackthis.co.uk/levels/extras/captcha1.php")
-#
-# with open("captcha.png", "wb") as fd:
-#     fd.write(response.content)
+def solve_training_data():
+    counter = 0
+    for letter_image in natsorted(glob.glob("traindata/unsolved/*.png")):
+        cmd = 'tesseract -psm 10 ' + letter_image + ' stdout nobatch letters_and_symbols'
+        cmdResult = os.popen(cmd).read().rstrip("\n\r")
+        os.rename( letter_image, 'traindata/solved/' + cmdResult + '_' + str(counter) + '.png')
+        counter += 1
 
 try:
+    solve_training_data()
 
-    while True:
-        # Clean guessdata directory
-        make_clean()
-
-        # Fetch a new captcha
-        get_captcha()
-
-        # Remove black background from image
-        ImageFilter.clean("captcha.png")
-
-        # Split every char of the image
-        # ImageSpliter.ImgSplit("captcha_clean.png", "guessdata")
-
-        # Recognize chars
-        # for letter_image in natsorted(glob.glob("guessdata/*.png")):
-        #     digest1 = imagehash.phash(Image.open(letter_image))
-        # for letter_image2 in glob.glob("traindata/*.png"):
-        #     digest2 = imagehash.phash(Image.open(letter_image2))
-        #     if digest1 == digest2:
-        #         letter = os.path.basename(letter_image2)[0]
-        #         print(letter, end='')
-        #         break
-        # else:
-        #     print('8', end='')
-
-        cmd = 'tesseract captcha_clean.png stdout nobatch letters_and_symbols'
-        cmdResult = os.popen(cmd).read().rstrip("\n\r")
-        cmdResult = cmdResult[::-1]
-
-        sess = get_hackthis_session()
-        response = sess.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": cmdResult}).content
-
-
-        if "Incomplete" not in str(response):
-            print("SUCCESS!")
-            break
-
-        print(cmdResult)
+    # while True:
+    #     # Clean guessdata directory
+    #     make_clean()
+    #
+    #     # Fetch a new captcha
+    #     get_captcha()
+    #
+    #     # Remove black background from image
+    #     ImageFilter.clean("captcha.png")
+    #
+    #     # Split every char of the image
+    #     # ImageSpliter.ImgSplit("captcha_clean.png", "guessdata")
+    #
+    #     # Recognize chars
+    #     # for letter_image in natsorted(glob.glob("guessdata/*.png")):
+    #     #     digest1 = imagehash.phash(Image.open(letter_image))
+    #     # for letter_image2 in glob.glob("traindata/*.png"):
+    #     #     digest2 = imagehash.phash(Image.open(letter_image2))
+    #     #     if digest1 == digest2:
+    #     #         letter = os.path.basename(letter_image2)[0]
+    #     #         print(letter, end='')
+    #     #         break
+    #     # else:
+    #     #     print('8', end='')
+    #
+    #     cmd = 'tesseract captcha_clean.png stdout nobatch letters_and_symbols'
+    #     cmdResult = os.popen(cmd).read().rstrip("\n\r")
+    #     cmdResult = cmdResult[::-1]
+    #
+    #     sess = get_hackthis_session()
+    #     response = sess.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": cmdResult}).content
+    #
+    #
+    #     if "Incomplete" not in str(response):
+    #         print("SUCCESS!")
+    #         break
+    #
+    #     print(cmdResult)
 
 
 except Exception as e:
