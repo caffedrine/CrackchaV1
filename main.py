@@ -1,6 +1,8 @@
 import requests
 import traceback
 import logging
+import datetime
+import time
 import os
 import shutil
 import glob
@@ -13,21 +15,15 @@ import ImageFilter
 import ImageSpliter
 
 
-sessGlob = None
-
-def get_hackthis_session():
-    if sessGlob is None:
-        sess = requests.session()
-        response = sess.post("https://www.hackthis.co.uk/?login", data={"username": Creds.username, "password": Creds.password}, timeout=20)
-        sess.get("https://www.hackthis.co.uk/levels/captcha/1", timeout=20)
-        return sess
-    else:
-        return sessGlob
+def get_new_hackthis_web_session():
+    sess = requests.session()
+    sess.post("https://www.hackthis.co.uk/?login", data={"username": Creds.username, "password": Creds.password}, timeout=20)
+    return sess
 
 
-def get_captcha(outputPathName = None):
-    sess = get_hackthis_session()
-    response = sess.get("https://www.hackthis.co.uk/levels/extras/captcha1.php", timeout=20)
+def get_captcha(webSession, outputPathName = None):
+    webSession.get("https://www.hackthis.co.uk/levels/captcha/1", timeout=20)
+    response = webSession.get("https://www.hackthis.co.uk/levels/extras/captcha1.php", timeout=20)
     if outputPathName is not None:
     	with open(outputPathName, "wb") as fd:
         	fd.write(response.content)
@@ -56,6 +52,10 @@ def make_clean():
         except Exception as e:
             print(e)
 
+def log(strToLog):
+	st = datetime.datetime.fromtimestamp(time.time()).strftime('%H:%M:%S')
+	print( "[%s] %s" % ( str(st), str(strToLog)), flush=True)
+
 
 def get_user_solution(captchaName):
 	while True:
@@ -66,7 +66,7 @@ def get_user_solution(captchaName):
 			return data.rstrip("\n\r")
 
 
-def build_training_data():
+def build_training_data(webSession):
     counter = 0
     while True:
         i = 0
@@ -82,7 +82,7 @@ def build_training_data():
         captcha_clean_path = "traindata/captcha%s/0_captcha%s_clean.png" % (str(i), str(i))
 
         # Download captcha
-        get_captcha( captcha_path )
+        get_captcha(webSession, captcha_path )
 
     	# Remove black background from image
         ImageFilter.clean(captcha_path, captcha_clean_path)
@@ -94,22 +94,49 @@ def build_training_data():
         splitStatus = ImageSpliter.ImgSplit(captcha_clean_path, solution)
 
 
+def pretty_print_POST(req):
+    """
+    At this point it is completely built and ready
+    to be fired; it is "prepared".
+
+    However pay attention at the formatting used in 
+    this function because it is programmed to be pretty 
+    printed and may differ from the actual request.
+    """
+    print('{}\n{}\r\n{}\r\n\r\n{}'.format(
+        '-----------START-----------',
+        req.method + ' ' + req.url,
+        '\r\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()),
+        req.body,
+    ))
+
+
 def main():
-	# build_training_data()
+	# Create a web session
+    log("Creating a new hackthis.co.uk web session...")
+    webSession = get_new_hackthis_web_session()
+
+	# Only to train the network
+	# build_training_data(webSession)
 
     # Clean guessdata directory
+    log("Cleaning up old files...")
     make_clean()
 
     # Fetch a new captcha
-    get_captcha("guessdata/captcha.png")
+    log("Download new captcha...")
+    get_captcha(webSession, "guessdata/captcha.png")
 
     # Remove black background from image
+    log("Cleaning up image...")
     ImageFilter.clean("guessdata/captcha.png", "guessdata/captcha_clean.png")
 
     # Split every char of the image
+    log("Split image....")
     ImageSpliter.ImgSplit("guessdata/captcha_clean.png")
 
     # Recognize chars
+    log("Solving image captcha...")
     solution = ""
     for letter_image in natsorted(glob.glob("guessdata/*.png")):
         if "captcha" in letter_image:
@@ -126,14 +153,14 @@ def main():
         else:
             solution += "8"
 
-    print("Submitting solution: '%s' " % (solution) )
-    sess = get_hackthis_session()
-    response = sess.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": solution}, timeout=20).content
+    log("Submitting solution: '%s' " % (solution))
+    response = webSession.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": solution } , timeout=20).content
+    
     if "Incomplete" not in str(response):
-        print("SUCCESS!")
+        log("SUCCESS!")
     else:
-        print("FAILED!")
-
+        log("FAILED!") # Time remaining: " + str(time_remaining) )
+        
 
 if __name__ == '__main__':
 	try:
