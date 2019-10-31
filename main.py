@@ -139,7 +139,7 @@ def main():
             solution += "8"
 
     log("Submitting solution: '%s' " % (solution))
-    response = web_session.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": solution}, timeout=20).content
+    response = web_session.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": solution[::-1] }, timeout=20).content
 
     if "Incomplete" not in str(response):
         log("SUCCESS!")
