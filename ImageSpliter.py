@@ -23,7 +23,7 @@ ILLEGAL_SYMBOLS = { \
     "&" : "and"     \
 }
 
-def ImgSplit(imgPath, solution):
+def ImgSplit(imgPath, solution = None):
     with open(imgPath, "rb") as fd:
         outputPath = os.path.dirname(imgPath)
         p = ImageFile.Parser()

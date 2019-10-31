@@ -18,8 +18,8 @@ sessGlob = None
 def get_hackthis_session():
     if sessGlob is None:
         sess = requests.session()
-        response = sess.post("https://www.hackthis.co.uk/?login", data={"username": Creds.username, "password": Creds.password})
-        sess.get("https://www.hackthis.co.uk/levels/captcha/1")
+        response = sess.post("https://www.hackthis.co.uk/?login", data={"username": Creds.username, "password": Creds.password}, timeout=20)
+        sess.get("https://www.hackthis.co.uk/levels/captcha/1", timeout=20)
         return sess
     else:
         return sessGlob
@@ -27,7 +27,7 @@ def get_hackthis_session():
 
 def get_captcha(outputPathName = None):
     sess = get_hackthis_session()
-    response = sess.get("https://www.hackthis.co.uk/levels/extras/captcha1.php")
+    response = sess.get("https://www.hackthis.co.uk/levels/extras/captcha1.php", timeout=20)
     if outputPathName is not None:
     	with open(outputPathName, "wb") as fd:
         	fd.write(response.content)
@@ -56,11 +56,6 @@ def make_clean():
         except Exception as e:
             print(e)
 
-    try:
-        os.remove("captcha.png")
-        os.remove("captcha_clean.png")
-    except:
-        pass
 
 def get_user_solution(captchaName):
 	while True:
@@ -73,10 +68,14 @@ def get_user_solution(captchaName):
 
 def build_training_data():
     counter = 0
-    for i in range(0, 1):
-    	# Create a new dir for every captcha if there is not one already
-        if not os.path.exists('captcha' + str(i)):
-            os.makedirs('traindata/captcha' + str(i))
+    while True:
+        i = 0
+    	# Get neax available captcha directory name
+        while os.path.exists('traindata/captcha' + str(i)):
+            i += 1
+		
+		# create a new dir 
+        os.makedirs('traindata/captcha' + str(i))
 
     	# Captcha paths
         captcha_path = "traindata/captcha%s/0_captcha%s.png" % (str(i), str(i))	
@@ -96,46 +95,44 @@ def build_training_data():
 
 
 def main():
-	build_training_data()
+	# build_training_data()
 
-	# while True:
-	#     # Clean guessdata directory
-	#     make_clean()
-	#
-	#     # Fetch a new captcha
-	#     get_captcha()
-	#
-	#     # Remove black background from image
-	#     ImageFilter.clean("captcha.png")
-	#
-	#     # Split every char of the image
-	#     # ImageSpliter.ImgSplit("captcha_clean.png", "guessdata")
-	#
-	#     # Recognize chars
-	#     # for letter_image in natsorted(glob.glob("guessdata/*.png")):
-	#     #     digest1 = imagehash.phash(Image.open(letter_image))
-	#     # for letter_image2 in glob.glob("traindata/*.png"):
-	#     #     digest2 = imagehash.phash(Image.open(letter_image2))
-	#     #     if digest1 == digest2:
-	#     #         letter = os.path.basename(letter_image2)[0]
-	#     #         print(letter, end='')
-	#     #         break
-	#     # else:
-	#     #     print('8', end='')
-	#
-	#     cmd = 'tesseract captcha_clean.png stdout nobatch letters_and_symbols'
-	#     cmdResult = os.popen(cmd).read().rstrip("\n\r")
-	#     cmdResult = cmdResult[::-1]
-	#
-	#     sess = get_hackthis_session()
-	#     response = sess.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": cmdResult}).content
-	#
-	#
-	#     if "Incomplete" not in str(response):
-	#         print("SUCCESS!")
-	#         break
-	#
-	#     print(cmdResult)
+    # Clean guessdata directory
+    make_clean()
+
+    # Fetch a new captcha
+    get_captcha("guessdata/captcha.png")
+
+    # Remove black background from image
+    ImageFilter.clean("guessdata/captcha.png", "guessdata/captcha_clean.png")
+
+    # Split every char of the image
+    ImageSpliter.ImgSplit("guessdata/captcha_clean.png")
+
+    # Recognize chars
+    solution = ""
+    for letter_image in natsorted(glob.glob("guessdata/*.png")):
+        if "captcha" in letter_image:
+    	    continue
+        digest1 = imagehash.phash(Image.open(letter_image))
+        for letter_image2 in glob.glob("traindata/**/*.png"):
+            digest2 = imagehash.phash(Image.open(letter_image2))
+            if digest1 == digest2:
+                letter = (os.path.basename(letter_image2).split("_")[0])
+                if letter in ImageSpliter.ILLEGAL_SYMBOLS.values():
+                    letter =  list(ImageSpliter.ILLEGAL_SYMBOLS.keys())[list(ImageSpliter.ILLEGAL_SYMBOLS.values()).index( letter )]  
+                solution += letter
+                break
+        else:
+            solution += "8"
+
+    print("Submitting solution: '%s' " % (solution) )
+    sess = get_hackthis_session()
+    response = sess.post("https://www.hackthis.co.uk/levels/captcha/1", data={"answer": solution}, timeout=20).content
+    if "Incomplete" not in str(response):
+        print("SUCCESS!")
+    else:
+        print("FAILED!")
 
 
 if __name__ == '__main__':
